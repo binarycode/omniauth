@@ -1,5 +1,6 @@
 require 'omniauth/oauth'
 require 'multi_json'
+require 'net/http'
 
 module OmniAuth
   module Strategies
@@ -46,15 +47,17 @@ module OmniAuth
       end
 
       def user_data
-        request_params = {
+        @data ||= MultiJson.decode(Net::HTTP.post_form(URI.parse('http://www.appsmail.ru/platform/api'), signed_params).body)[0]
+      end
+
+      def signed_params
+        params = {
           'method' => 'users.getInfo',
           'app_id' => client_id,
           'session_key' => @access_token.token,
           'uids' => @access_token['x_mailru_vid']
         }
-
-        request_params.merge!('sig' => calculate_signature(request_params))
-        @data ||= MultiJson.decode(client.request(:get, 'http://www.appsmail.ru/platform/api', request_params))[0]
+        params.merge! "sig" => calculate_signature(params)
       end
 
       def user_info
